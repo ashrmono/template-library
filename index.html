@@ -174,11 +174,27 @@
   .req-status.approved{background:var(--ok-bg); color:var(--ok);}
   .req-status.rejected{background:var(--warn-bg); color:var(--warn);}
   .req-desc{font-size:13.5px; line-height:1.55; color:var(--ink); margin:8px 0;}
+  .req-suggestion{background:var(--ph-bg); border:1px solid var(--rule-soft); border-radius:5px; padding:10px 12px; margin:8px 0;}
+  .req-suggestion-label{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); margin-bottom:6px;}
+  .req-suggestion-subject{font-size:13px; font-weight:500; margin-bottom:4px;}
+  .req-suggestion-body{font-size:13px; line-height:1.5; white-space:pre-wrap; color:var(--ink);}
   .req-actions{display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap;}
   .req-actions select{padding:6px 8px; border:1px solid var(--rule); border-radius:4px; background:var(--paper); color:var(--ink); font-size:12.5px;}
   .btn-approve{background:var(--ok);color:var(--paper);border:none;border-radius:4px;padding:7px 13px;font-size:12.5px;cursor:pointer;}
   .btn-reject{background:none;border:1px solid var(--warn);color:var(--warn);border-radius:4px;padding:7px 13px;font-size:12.5px;cursor:pointer;}
   .req-empty{color:var(--ink-faint); font-size:13.5px; padding:20px 4px;}
+  .req-edit{background:var(--ph-bg); border:1px solid var(--rule-soft); border-radius:5px; padding:10px 12px; margin:8px 0;}
+  .req-edit-label{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); margin:8px 0 4px;}
+  .req-edit-label:first-child{margin-top:0;}
+  .req-edit-hint{font-size:12px; color:var(--ink-soft); margin-bottom:6px;}
+  .req-edit input[type=text], .req-edit textarea{width:100%; padding:8px 10px; border:1px solid var(--rule); border-radius:4px; background:var(--paper); color:var(--ink); font-size:13px; font-family:inherit;}
+  .req-edit textarea{min-height:110px; resize:vertical; line-height:1.5;}
+  .req-reject-reason{background:var(--warn-bg); border:1px solid var(--warn); border-radius:5px; padding:10px 12px; margin:8px 0;}
+  .req-reject-box{margin-top:10px; display:flex; flex-direction:column; gap:8px; width:100%;}
+  .req-reject-box textarea{width:100%; min-height:70px; padding:8px 10px; border:1px solid var(--warn); border-radius:4px; background:var(--paper); color:var(--ink); font-size:13px; font-family:inherit;}
+  .req-reject-box-actions{display:flex; gap:8px;}
+  .btn-reject-confirm{background:var(--warn);color:var(--paper);border:none;border-radius:4px;padding:7px 13px;font-size:12.5px;cursor:pointer;}
+  .btn-reject-cancel{background:none;border:1px solid var(--rule);color:var(--ink-soft);border-radius:4px;padding:7px 13px;font-size:12.5px;cursor:pointer;}
 
   /* ---------- modal (request form) ---------- */
   .overlay{ position:fixed; inset:0; background:rgba(20,18,14,.45); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50; }
@@ -311,6 +327,14 @@
         <label for="reqDesc">Describe the situation</label>
         <textarea id="reqDesc" placeholder="When would someone reach for this? What should the email say or avoid?" required></textarea>
       </div>
+      <div class="field">
+        <label for="reqSubject">Suggested subject line <span style="color:var(--ink-soft);font-weight:400;">(optional)</span></label>
+        <input type="text" id="reqSubject" placeholder="e.g. Following up on your Monotype renewal">
+      </div>
+      <div class="field">
+        <label for="reqBody">Suggested email body <span style="color:var(--ink-soft);font-weight:400;">(optional)</span></label>
+        <textarea id="reqBody" placeholder="If you already have wording in mind, drop it here — the admin can use it as-is or edit it."></textarea>
+      </div>
       <div class="form-error" id="formError" hidden></div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
@@ -351,7 +375,7 @@ let session = null;          // { mode: 'admin'|'colleague', name }
 let TEMPLATES = [];
 let REQUESTS = [];
 let unsubTemplates = null, unsubRequests = null;
-let state = { query:"", cat:"all", selected:null, tab:"library", editing:null };
+let state = { query:"", cat:"all", selected:null, tab:"library", editing:null, rejectingId:null };
 
 /* ---------------- helpers ---------------- */
 function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -704,11 +728,13 @@ document.getElementById("requestForm").addEventListener("submit", async (e) => {
   const type = document.querySelector('input[name="reqType"]:checked').value;
   const title = document.getElementById("reqTitle").value.trim();
   const description = document.getElementById("reqDesc").value.trim();
+  const suggestedSubject = document.getElementById("reqSubject").value.trim();
+  const suggestedBody = document.getElementById("reqBody").value.trim();
   if (!title || !description){ errEl.hidden = false; errEl.textContent = "Title and description are required."; return; }
   const targetId = type === "change" ? document.getElementById("reqExisting").value : null;
   try {
     await db.collection("requests").add({
-      type, targetId, title, description,
+      type, targetId, title, description, suggestedSubject, suggestedBody,
       requestedBy: session.name,
       status: "pending",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -728,15 +754,50 @@ function renderRequests(){
     const forLine = r.type === "change"
       ? `Change to Template ${r.targetId}${target ? " — " + escapeHtml(target.title) : ""}`
       : "New use case";
-    const actions = (session.mode === "admin" && r.status === "pending") ? `
+    const isAdminPending = session.mode === "admin" && r.status === "pending";
+
+    // Admin gets an editable subject/body before approving — a colleague's
+    // suggestion is a starting point, not something we ship untouched.
+    const editBlock = isAdminPending ? `
+      <div class="req-edit">
+        <div class="req-edit-hint">Review and adjust the wording before approving — this is what gets saved.</div>
+        <label class="req-edit-label" for="reqEditSubject-${r.id}">Subject</label>
+        <input type="text" id="reqEditSubject-${r.id}" data-subject-for="${r.id}" value="${escapeHtml(r.suggestedSubject||"")}" placeholder="Write the subject line">
+        <label class="req-edit-label" for="reqEditBody-${r.id}">Body</label>
+        <textarea id="reqEditBody-${r.id}" data-body-for="${r.id}" placeholder="Write the email body">${escapeHtml(r.suggestedBody||"")}</textarea>
+      </div>` : (r.suggestedSubject || r.suggestedBody) ? `
+      <div class="req-suggestion">
+        <div class="req-suggestion-label">Suggested wording from ${escapeHtml(r.requestedBy||"requester")}</div>
+        ${r.suggestedSubject ? `<div class="req-suggestion-subject">Subject: ${escapeHtml(r.suggestedSubject)}</div>` : ""}
+        ${r.suggestedBody ? `<div class="req-suggestion-body">${escapeHtml(r.suggestedBody)}</div>` : ""}
+      </div>` : "";
+
+    const rejectReasonBlock = (r.status === "rejected" && r.rejectionReason) ? `
+      <div class="req-reject-reason">
+        <div class="req-suggestion-label">Rejected — reason</div>
+        <div>${escapeHtml(r.rejectionReason)}</div>
+      </div>` : "";
+
+    const showingRejectBox = isAdminPending && state.rejectingId === r.id;
+    const actions = isAdminPending ? `
       <div class="req-actions">
         ${r.type === "new" ? `
           <select data-cat-for="${r.id}">
             ${Object.keys(CATS).map(k => `<option value="${k}">${CATS[k].label}</option>`).join("")}
           </select>` : ""}
         <button class="btn-approve" data-approve="${r.id}">Approve</button>
-        <button class="btn-reject" data-reject="${r.id}">Reject</button>
-      </div>` : "";
+        <button class="btn-reject" data-reject-toggle="${r.id}">Reject</button>
+      </div>
+      ${showingRejectBox ? `
+      <div class="req-reject-box">
+        <label class="req-edit-label" for="reqRejectReason-${r.id}">Reason (shown to the requester)</label>
+        <textarea id="reqRejectReason-${r.id}" placeholder="e.g. Already covered by Template 03, or: too close to a live send, let's talk first"></textarea>
+        <div class="req-reject-box-actions">
+          <button class="btn-reject-confirm" data-reject-confirm="${r.id}">Confirm reject</button>
+          <button class="btn-reject-cancel" data-reject-cancel="${r.id}">Cancel</button>
+        </div>
+      </div>` : ""}` : "";
+
     return `
       <div class="req-card">
         <div class="req-head">
@@ -747,6 +808,8 @@ function renderRequests(){
           <span class="req-status ${r.status}">${r.status}</span>
         </div>
         <div class="req-desc">${escapeHtml(r.description)}</div>
+        ${editBlock}
+        ${rejectReasonBlock}
         ${actions}
       </div>`;
   }).join("");
@@ -755,6 +818,8 @@ function renderRequests(){
     btn.addEventListener("click", async () => {
       const id = btn.dataset.approve;
       const r = REQUESTS.find(x => x.id === id);
+      const subject = (listEl.querySelector(`[data-subject-for="${id}"]`)||{}).value?.trim() || "";
+      const body = (listEl.querySelector(`[data-body-for="${id}"]`)||{}).value?.trim() || "";
       try {
         if (r.type === "new"){
           const cat = listEl.querySelector(`[data-cat-for="${id}"]`).value;
@@ -762,12 +827,15 @@ function renderRequests(){
           await db.collection("templates").doc(newId).set({
             title: r.title, category: cat, status: "stub",
             whenToUse: r.description,
-            variants: [{label:"Default", subject:"", body:""}],
+            variants: [{label:"Default", subject, body}],
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           });
         } else if (r.targetId) {
+          let note = r.title + ": " + r.description;
+          if (subject) note += "\nSuggested subject: " + subject;
+          if (body) note += "\nSuggested body: " + body;
           await db.collection("templates").doc(r.targetId).update({
-            requestedAddition: r.title + ": " + r.description
+            requestedAddition: note
           });
         }
         await db.collection("requests").doc(id).update({ status:"approved", resolvedAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -775,10 +843,30 @@ function renderRequests(){
       } catch (ex){ toast("Couldn't approve: " + ex.message); }
     });
   });
-  listEl.querySelectorAll("[data-reject]").forEach(btn => {
+  listEl.querySelectorAll("[data-reject-toggle]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.rejectingId = btn.dataset.rejectToggle;
+      renderRequests();
+    });
+  });
+  listEl.querySelectorAll("[data-reject-cancel]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.rejectingId = null;
+      renderRequests();
+    });
+  });
+  listEl.querySelectorAll("[data-reject-confirm]").forEach(btn => {
     btn.addEventListener("click", async () => {
+      const id = btn.dataset.rejectConfirm;
+      const reasonEl = document.getElementById(`reqRejectReason-${id}`);
+      const rejectionReason = (reasonEl?.value || "").trim();
       try {
-        await db.collection("requests").doc(btn.dataset.reject).update({ status:"rejected", resolvedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await db.collection("requests").doc(id).update({
+          status:"rejected", rejectionReason,
+          resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        state.rejectingId = null;
+        toast("Rejected.");
       } catch (ex){ toast("Couldn't reject: " + ex.message); }
     });
   });
