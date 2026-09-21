@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Template Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    box-sizing:border-box;
+    --paper:#F6F3EC; --card:#FBF9F4; --ink:#221F1A; --ink-soft:#6B6458; --ink-faint:#98917F;
+    --rule:#DDD5C2; --rule-soft:#E8E2D2;
+    --retention:#A2672A; --retention-bg:#EFE1C8;
+    --routing:#3C6B63; --routing-bg:#DCE8E2;
+    --policy:#795371; --policy-bg:#E9DEE6;
+    --ph-bg:#EEE6D0; --ph-ink:#7A5A1E;
+    --focus:#3C6B63; --shadow:0 1px 0 rgba(34,31,26,.05);
+    --warn:#A24A3A; --warn-bg:#F1DFD8;
+    --ok:#3C6B63; --ok-bg:#DCE8E2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#1B1916; --card:#221F1A; --ink:#EDE7D9; --ink-soft:#B2A995; --ink-faint:#7C7565;
+      --rule:#38332A; --rule-soft:#2C2820;
+      --retention:#D79A4B; --retention-bg:#3A2E17;
+      --routing:#7FB6A9; --routing-bg:#1E332E;
+      --policy:#C79FC0; --policy-bg:#33262F;
+      --ph-bg:#332B16; --ph-ink:#E0B463;
+      --shadow:0 1px 0 rgba(0,0,0,.3);
+      --warn:#E0897A; --warn-bg:#3A241F;
+      --ok:#7FB6A9; --ok-bg:#1E332E;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#1B1916; --card:#221F1A; --ink:#EDE7D9; --ink-soft:#B2A995; --ink-faint:#7C7565;
+    --rule:#38332A; --rule-soft:#2C2820;
+    --retention:#D79A4B; --retention-bg:#3A2E17;
+    --routing:#7FB6A9; --routing-bg:#1E332E;
+    --policy:#C79FC0; --policy-bg:#33262F;
+    --ph-bg:#332B16; --ph-ink:#E0B463;
+    --shadow:0 1px 0 rgba(0,0,0,.3);
+    --warn:#E0897A; --warn-bg:#3A241F;
+    --ok:#7FB6A9; --ok-bg:#1E332E;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{ margin:0; background:var(--paper); color:var(--ink); font-family:'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3{ font-family:'Fraunces', Georgia, 'Times New Roman', serif; font-weight:500; margin:0; letter-spacing:-0.01em; }
+  a{color:inherit;} button{font-family:inherit;}
+  input,textarea,select{font-family:inherit;}
+  [hidden]{display:none !important;}
+
+  /* ---------- gate ---------- */
+  .gate{ min-height:100%; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .gate-card{ width:100%; max-width:380px; background:var(--card); border:1px solid var(--rule); border-radius:8px; padding:30px 28px; }
+  .gate-title{ font-size:22px; font-style:italic; margin-bottom:6px; }
+  .gate-sub{ color:var(--ink-soft); font-size:13.5px; margin-bottom:22px; line-height:1.5; }
+  .gate-tabs{ display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--rule); }
+  .gate-tab{ flex:1; background:none; border:none; padding:9px 4px; font-size:13px; color:var(--ink-faint); cursor:pointer; border-bottom:2px solid transparent; }
+  .gate-tab[aria-selected="true"]{ color:var(--ink); border-bottom-color:var(--ink); font-weight:500; }
+  .field{margin-bottom:14px;}
+  .field label{ display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:5px; }
+  .field input[type=text], .field input[type=password], .field input[type=email], .field textarea, .field select{
+    width:100%; padding:10px 11px; border:1px solid var(--rule); background:var(--paper); color:var(--ink); border-radius:4px; font-size:14.5px;
+  }
+  .field textarea{resize:vertical; min-height:74px;}
+  .field input:focus, .field textarea:focus, .field select:focus{outline:2px solid var(--focus); outline-offset:1px;}
+  .btn-primary{ background:var(--ink); color:var(--paper); border:none; border-radius:4px; padding:11px 16px; font-size:14px; cursor:pointer; font-weight:500; width:100%; }
+  .btn-primary:hover{opacity:.9;}
+  .btn-primary:disabled{opacity:.5; cursor:default;}
+  .gate-error{ color:var(--warn); font-size:13px; margin:-4px 0 14px; }
+  .gate-note{ font-size:12px; color:var(--ink-faint); margin-top:16px; line-height:1.5; }
+
+  /* ---------- app shell ---------- */
+  .app{ max-width:1180px; margin:0 auto; padding:22px 20px 64px; }
+  .top{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding-bottom:16px; border-bottom:1px solid var(--rule); margin-bottom:18px; flex-wrap:wrap; }
+  .top-title{ font-size:25px; font-weight:600; font-style:italic; }
+  .top-sub{ color:var(--ink-soft); font-size:13px; margin-top:3px; }
+  .top-right{ display:flex; align-items:center; gap:10px; }
+  .who{ font-size:12.5px; color:var(--ink-soft); text-align:right; line-height:1.4; }
+  .who b{color:var(--ink); font-weight:500;}
+  .badge{ display:inline-block; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; padding:2px 7px; border-radius:20px; background:var(--policy-bg); color:var(--policy); margin-left:6px; vertical-align:middle; }
+  .btn-ghost{ background:none; border:1px solid var(--rule); color:var(--ink-soft); border-radius:4px; padding:8px 13px; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .btn-ghost:hover{border-color:var(--ink-faint); color:var(--ink);}
+
+  .tabbar{ display:flex; gap:2px; margin-bottom:20px; border-bottom:1px solid var(--rule); }
+  .tabbtn{ background:none; border:none; padding:9px 4px; margin-right:22px; font-size:14px; color:var(--ink-faint); cursor:pointer; border-bottom:2px solid transparent; position:relative; }
+  .tabbtn[aria-selected="true"]{ color:var(--ink); border-bottom-color:var(--ink); font-weight:500; }
+  .tabbtn .count{ display:inline-block; min-width:17px; text-align:center; background:var(--rule-soft); color:var(--ink-soft); font-size:11px; padding:1px 5px; border-radius:20px; margin-left:6px; }
+  .tabbtn[aria-selected="true"] .count{background:var(--ink); color:var(--paper);}
+
+  /* ---------- library ---------- */
+  .layout{ display:grid; grid-template-columns:290px minmax(0,1fr); gap:28px; align-items:start; }
+  @media (max-width:820px){ .layout{grid-template-columns:1fr;} }
+  .sidebar{position:sticky; top:20px;}
+  @media (max-width:820px){ .sidebar{position:static;} }
+  .search{ position:relative; margin-bottom:14px; }
+  .search input{ width:100%; padding:10px 12px 10px 34px; background:var(--card); border:1px solid var(--rule); border-radius:4px; color:var(--ink); font-size:14px; }
+  .search svg{ position:absolute; left:10px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--ink-faint); pointer-events:none; }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+  .chip{ border:1px solid var(--rule); background:var(--card); color:var(--ink-soft); font-size:12px; padding:5px 10px; border-radius:20px; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .chip .dot{width:7px;height:7px;border-radius:50%;flex:none;}
+  .chip[aria-pressed="true"]{ border-color:currentColor; font-weight:500; }
+  .chip.cat-retention[aria-pressed="true"]{color:var(--retention); background:var(--retention-bg);}
+  .chip.cat-routing[aria-pressed="true"]{color:var(--routing); background:var(--routing-bg);}
+  .chip.cat-policy[aria-pressed="true"]{color:var(--policy); background:var(--policy-bg);}
+  .chip.cat-all[aria-pressed="true"]{color:var(--ink); background:var(--rule-soft); border-color:var(--rule);}
+  .list-count{ font-size:11.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px 2px; display:flex; justify-content:space-between; align-items:center; }
+  .add-tpl{background:none;border:none;color:var(--ink-soft);font-size:11.5px;cursor:pointer;text-decoration:underline;}
+  .list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;}
+  .list-item{ display:block; width:100%; text-align:left; background:var(--card); border:1px solid var(--rule-soft); border-left:3px solid var(--rule); border-radius:2px; padding:10px 12px; cursor:pointer; box-shadow:var(--shadow); }
+  .list-item.cat-retention{border-left-color:var(--retention);}
+  .list-item.cat-routing{border-left-color:var(--routing);}
+  .list-item.cat-policy{border-left-color:var(--policy);}
+  .list-item[aria-current="true"]{ background:var(--rule-soft); border-color:var(--rule); }
+  .list-item .num{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint); }
+  .list-item .name{ display:block; font-size:14px; margin-top:2px; line-height:1.3; }
+  .list-item .stub-tag{font-size:10px; text-transform:uppercase; color:var(--ink-faint); margin-left:6px;}
+  .list-empty{ color:var(--ink-faint); font-size:13.5px; padding:14px 4px; }
+  .detail{min-width:0;}
+  .back-btn{ display:none; background:none; border:none; color:var(--ink-soft); font-size:13px; padding:0 0 14px; cursor:pointer; align-items:center; gap:5px; }
+  @media (max-width:820px){
+    .back-btn{display:inline-flex;}
+    .layout.showing-detail .sidebar{display:none;}
+    .layout:not(.showing-detail) .detail{display:none;}
+  }
+  .detail-eyebrow{ display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+  .cat-tag{ font-size:11.5px; padding:3px 9px; border-radius:20px; font-weight:500; }
+  .cat-tag.cat-retention{color:var(--retention); background:var(--retention-bg);}
+  .cat-tag.cat-routing{color:var(--routing); background:var(--routing-bg);}
+  .cat-tag.cat-policy{color:var(--policy); background:var(--policy-bg);}
+  .detail-num{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-faint); }
+  .detail-title{ font-size:26px; line-height:1.25; }
+  .detail-actions{margin-left:auto; display:flex; gap:8px;}
+  .detail-meta{ margin:14px 0 20px; padding:14px 16px; background:var(--card); border:1px solid var(--rule-soft); border-radius:4px; font-size:14px; line-height:1.6; }
+  .detail-meta .label{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); display:block; margin-bottom:5px; }
+  .detail-meta p{margin:0;}
+  .change-flag{ margin:0 0 20px; padding:12px 16px; background:var(--warn-bg); border:1px solid var(--warn); border-radius:4px; font-size:13.5px; line-height:1.55; }
+  .change-flag b{color:var(--warn);}
+  .variant{ margin-bottom:22px; border:1px solid var(--rule-soft); border-radius:4px; overflow:hidden; background:var(--card); }
+  .variant-head{ padding:12px 16px; border-bottom:1px solid var(--rule-soft); display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .variant-head h3{font-size:15px; font-style:italic; font-weight:500;}
+  .copy-btn{ flex:none; background:var(--paper); border:1px solid var(--rule); color:var(--ink); font-size:12.5px; padding:6px 11px; border-radius:4px; cursor:pointer; white-space:nowrap; position:relative; }
+  .copy-btn:hover{border-color:var(--ink-faint);}
+  .copy-btn[data-copied="true"]::after{ content:"Copied"; position:absolute; top:-26px; right:0; background:var(--ink); color:var(--paper); font-size:11px; padding:3px 7px; border-radius:3px; }
+  .email-body{ padding:16px 18px 18px; font-size:14.5px; line-height:1.65; }
+  .email-body p{margin:0 0 13px;} .email-body p:last-child{margin-bottom:0;}
+  .email-subject{ font-size:13px; color:var(--ink-soft); margin-bottom:14px; padding-bottom:12px; border-bottom:1px dotted var(--rule); }
+  .ph{ font-family:'IBM Plex Mono', monospace; font-size:0.91em; background:var(--ph-bg); color:var(--ph-ink); padding:0 4px; border-radius:2px; white-space:nowrap; }
+  mark{ background:var(--ph-bg); color:inherit; border-radius:2px; padding:0 1px; }
+
+  /* edit mode */
+  .edit-panel{border:1px solid var(--rule); border-radius:5px; padding:18px; background:var(--card); margin-bottom:16px;}
+  .edit-row{display:grid; grid-template-columns:1fr 160px; gap:12px;}
+  @media (max-width:600px){.edit-row{grid-template-columns:1fr;}}
+  .variant-edit{border:1px solid var(--rule-soft); border-radius:4px; padding:14px; margin-bottom:14px; background:var(--paper);}
+  .variant-edit-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .remove-variant{background:none;border:none;color:var(--warn);font-size:12px;cursor:pointer;}
+  .add-variant{background:none;border:1px dashed var(--rule);color:var(--ink-soft);font-size:13px;cursor:pointer;padding:8px;width:100%;border-radius:4px;}
+  .edit-actions{display:flex; gap:10px; margin-top:16px;}
+  .btn-save{background:var(--ok);color:var(--paper);border:none;border-radius:4px;padding:9px 16px;font-size:13.5px;cursor:pointer;font-weight:500;}
+  .btn-cancel{background:none;border:1px solid var(--rule);color:var(--ink-soft);border-radius:4px;padding:9px 16px;font-size:13.5px;cursor:pointer;}
+
+  /* ---------- requests tab ---------- */
+  .req-list{display:flex; flex-direction:column; gap:10px; max-width:760px;}
+  .req-card{border:1px solid var(--rule-soft); border-radius:5px; padding:14px 16px; background:var(--card);}
+  .req-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:6px;}
+  .req-title{font-size:15px; font-weight:500;}
+  .req-meta{font-size:12px; color:var(--ink-faint);}
+  .req-status{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; padding:2px 8px; border-radius:20px; flex:none;}
+  .req-status.pending{background:var(--ph-bg); color:var(--ph-ink);}
+  .req-status.approved{background:var(--ok-bg); color:var(--ok);}
+  .req-status.rejected{background:var(--warn-bg); color:var(--warn);}
+  .req-desc{font-size:13.5px; line-height:1.55; color:var(--ink); margin:8px 0;}
+  .req-actions{display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap;}
+  .req-actions select{padding:6px 8px; border:1px solid var(--rule); border-radius:4px; background:var(--paper); color:var(--ink); font-size:12.5px;}
+  .btn-approve{background:var(--ok);color:var(--paper);border:none;border-radius:4px;padding:7px 13px;font-size:12.5px;cursor:pointer;}
+  .btn-reject{background:none;border:1px solid var(--warn);color:var(--warn);border-radius:4px;padding:7px 13px;font-size:12.5px;cursor:pointer;}
+  .req-empty{color:var(--ink-faint); font-size:13.5px; padding:20px 4px;}
+
+  /* ---------- modal (request form) ---------- */
+  .overlay{ position:fixed; inset:0; background:rgba(20,18,14,.45); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .modal{ background:var(--paper); border:1px solid var(--rule); border-radius:6px; width:100%; max-width:480px; max-height:88vh; overflow:auto; padding:22px 22px 20px; }
+  .modal h2{font-size:19px; margin-bottom:4px;}
+  .modal .modal-sub{ font-size:13px; color:var(--ink-soft); margin-bottom:18px; line-height:1.5; }
+  .radio-row{ display:flex; gap:16px; margin-bottom:4px; }
+  .radio-row label{ display:flex; align-items:center; gap:6px; font-size:13.5px; color:var(--ink); }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+  .form-error{ color:var(--warn); font-size:12.5px; margin-top:-6px; margin-bottom:10px; }
+  .toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper); padding:10px 18px; border-radius:5px; font-size:13.5px; z-index:60;}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN GATE ================= -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="gate-title">Template Library</div>
+    <div class="gate-sub">Monotype retention &amp; routing email templates.</div>
+    <div class="gate-tabs" role="tablist">
+      <button class="gate-tab" id="tabTeamBtn" role="tab" aria-selected="true">Team access</button>
+      <button class="gate-tab" id="tabAdminBtn" role="tab" aria-selected="false">Admin login</button>
+    </div>
+
+    <form id="teamForm">
+      <div class="field">
+        <label for="teamName">Your name</label>
+        <input type="text" id="teamName" placeholder="e.g. Priya Menon" required autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="teamPassword">Team password</label>
+        <input type="password" id="teamPassword" placeholder="Ask Anshuka if you don't have it" required>
+      </div>
+      <div class="gate-error" id="teamError" hidden></div>
+      <button type="submit" class="btn-primary" id="teamSubmit">Enter</button>
+    </form>
+
+    <form id="adminForm" hidden>
+      <div class="field">
+        <label for="adminEmail">Admin email</label>
+        <input type="email" id="adminEmail" placeholder="you@example.com" required autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="adminPassword">Admin password</label>
+        <input type="password" id="adminPassword" required>
+      </div>
+      <div class="gate-error" id="adminError" hidden></div>
+      <button type="submit" class="btn-primary" id="adminSubmit">Sign in</button>
+    </form>
+
+    <div class="gate-note" id="gateNote">Everyone on the team uses the same password. Your name is just so requests show who asked.</div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div class="app" id="app" hidden>
+  <div class="top">
+    <div>
+      <div class="top-title">Template Library</div>
+      <div class="top-sub">Search, copy, request. <span id="adminOnlyHint" hidden>You're signed in as admin, edits save for everyone.</span></div>
+    </div>
+    <div class="top-right">
+      <div class="who">Signed in as <b id="whoName">—</b><span class="badge" id="adminBadge" hidden>Admin</span></div>
+      <button class="btn-ghost" id="signOutBtn">Sign out</button>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <button class="tabbtn" id="tabLibraryBtn" aria-selected="true">Library</button>
+    <button class="tabbtn" id="tabRequestsBtn" aria-selected="false">Requests <span class="count" id="reqCount">0</span></button>
+  </div>
+
+  <!-- LIBRARY VIEW -->
+  <div id="libraryView">
+    <div class="layout" id="layout">
+      <div class="sidebar">
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="searchInput" type="text" placeholder="Search templates…" autocomplete="off">
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="list-count">
+          <span id="listCount"></span>
+          <button class="add-tpl" id="addTplBtn" hidden>+ New template</button>
+        </div>
+        <ul class="list" id="list"></ul>
+      </div>
+      <div class="detail" id="detail">
+        <button class="back-btn" id="backBtn">&larr; All templates</button>
+        <div id="detailContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REQUESTS VIEW -->
+  <div id="requestsView" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div style="color:var(--ink-soft);font-size:13.5px;max-width:60ch;">Anyone can ask for a new template or a change to an existing one. <span id="approveHint" hidden>You can approve or reject below.</span></div>
+      <button class="btn-primary" style="width:auto;" id="requestBtn">Request a template</button>
+    </div>
+    <div class="req-list" id="reqList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<!-- REQUEST MODAL -->
+<div class="overlay" id="overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <h2>Request a template</h2>
+    <div class="modal-sub">This goes straight to the Requests tab, visible to the admin right away.</div>
+    <form id="requestForm">
+      <div class="field">
+        <label for="reqTitle">Short title</label>
+        <input type="text" id="reqTitle" placeholder="e.g. Customer disputes an invoice line item" required>
+      </div>
+      <div class="field">
+        <label>This is for</label>
+        <div class="radio-row">
+          <label><input type="radio" name="reqType" value="new" checked> A new use case</label>
+          <label><input type="radio" name="reqType" value="change"> A change to an existing template</label>
+        </div>
+      </div>
+      <div class="field" id="existingField" hidden>
+        <label for="reqExisting">Which template</label>
+        <select id="reqExisting"></select>
+      </div>
+      <div class="field">
+        <label for="reqDesc">Describe the situation</label>
+        <textarea id="reqDesc" placeholder="When would someone reach for this? What should the email say or avoid?" required></textarea>
+      </div>
+      <div class="form-error" id="formError" hidden></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary" style="width:auto;">Submit request</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- Firebase (CDN, no build step) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script>
+/* =========================================================================
+   1) FILL THIS IN — see SETUP_GUIDE.md
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAtJhQjbueI9iFdQ3vYUR2ljJqiru6yfJg",
+  authDomain: "monotype-template-library.firebaseapp.com",
+  projectId: "monotype-template-library",
+  storageBucket: "monotype-template-library.firebasestorage.app",
+  messagingSenderId: "838098468084",
+  appId: "1:838098468084:web:7f76f261e21916b13f72a1"
+};
+const ADMIN_EMAIL = "anshuka.sharma@monotype.com";   // the login you'll sign in with as admin
+const TEAM_PASSWORD = "Monotype2026!";              // the one password everyone else types in — change this before sharing the link
+/* ========================================================================= */
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const CATS = { retention:{label:"Retention"}, routing:{label:"Routing"}, policy:{label:"Policy"} };
+
+let session = null;          // { mode: 'admin'|'colleague', name }
+let TEMPLATES = [];
+let REQUESTS = [];
+let unsubTemplates = null, unsubRequests = null;
+let state = { query:"", cat:"all", selected:null, tab:"library", editing:null };
+
+/* ---------------- helpers ---------------- */
+function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function renderPlaceholders(escaped){ return escaped.replace(/\[([^\[\]]+)\]/g, (m, inner) => `<span class="ph">[${inner}]</span>`); }
+function formatEmailBody(raw){
+  return (raw||"").trim().split(/\n\n+/).filter(Boolean).map(block => {
+    const withBreaks = block.split("\n").map(l => renderPlaceholders(escapeHtml(l))).join("<br>");
+    return `<p>${withBreaks}</p>`;
+  }).join("");
+}
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.hidden = true, 2600);
+}
+function pad2(n){ return String(n).padStart(2,"0"); }
+function nextTemplateId(){
+  const nums = TEMPLATES.map(t => parseInt(t.id,10)).filter(n => !isNaN(n));
+  const next = (nums.length ? Math.max(...nums) : 0) + 1;
+  return pad2(next);
+}
+function fmtDate(ts){
+  if (!ts) return "";
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+}
+
+/* ---------------- auth ---------------- */
+document.getElementById("tabTeamBtn").addEventListener("click", () => switchGateTab("team"));
+document.getElementById("tabAdminBtn").addEventListener("click", () => switchGateTab("admin"));
+function switchGateTab(which){
+  const isTeam = which === "team";
+  document.getElementById("tabTeamBtn").setAttribute("aria-selected", isTeam);
+  document.getElementById("tabAdminBtn").setAttribute("aria-selected", !isTeam);
+  document.getElementById("teamForm").hidden = !isTeam;
+  document.getElementById("adminForm").hidden = isTeam;
+  document.getElementById("gateNote").hidden = !isTeam;
+}
+
+document.getElementById("teamForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = document.getElementById("teamError");
+  err.hidden = true;
+  const name = document.getElementById("teamName").value.trim();
+  const pw = document.getElementById("teamPassword").value;
+  if (pw !== TEAM_PASSWORD){
+    err.textContent = "That's not the team password.";
+    err.hidden = false;
+    return;
+  }
+  document.getElementById("teamSubmit").disabled = true;
+  try {
+    sessionStorage.setItem("tl_name", name);
+    await auth.signInAnonymously();
+  } catch (ex){
+    err.textContent = "Couldn't sign in: " + ex.message;
+    err.hidden = false;
+    document.getElementById("teamSubmit").disabled = false;
+  }
+});
+
+document.getElementById("adminForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = document.getElementById("adminError");
+  err.hidden = true;
+  const email = document.getElementById("adminEmail").value.trim();
+  const pw = document.getElementById("adminPassword").value;
+  document.getElementById("adminSubmit").disabled = true;
+  try {
+    await auth.signInWithEmailAndPassword(email, pw);
+  } catch (ex){
+    err.textContent = "Couldn't sign in: " + ex.message;
+    err.hidden = false;
+    document.getElementById("adminSubmit").disabled = false;
+  }
+});
+
+document.getElementById("signOutBtn").addEventListener("click", () => {
+  sessionStorage.removeItem("tl_name");
+  auth.signOut();
+});
+
+auth.onAuthStateChanged(user => {
+  if (user){
+    if (!user.isAnonymous && user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()){
+      session = { mode:"admin", name:"Anshuka" };
+    } else {
+      session = { mode:"colleague", name: sessionStorage.getItem("tl_name") || "Teammate" };
+    }
+    document.getElementById("gate").hidden = true;
+    document.getElementById("app").hidden = false;
+    document.getElementById("whoName").textContent = session.name;
+    document.getElementById("adminBadge").hidden = session.mode !== "admin";
+    document.getElementById("adminOnlyHint").hidden = session.mode !== "admin";
+    document.getElementById("addTplBtn").hidden = session.mode !== "admin";
+    document.getElementById("approveHint").hidden = session.mode !== "admin";
+    subscribeData();
+  } else {
+    session = null;
+    document.getElementById("gate").hidden = false;
+    document.getElementById("app").hidden = true;
+    document.getElementById("teamSubmit").disabled = false;
+    document.getElementById("adminSubmit").disabled = false;
+    if (unsubTemplates) unsubTemplates();
+    if (unsubRequests) unsubRequests();
+  }
+});
+
+/* ---------------- data ---------------- */
+function subscribeData(){
+  if (unsubTemplates) unsubTemplates();
+  if (unsubRequests) unsubRequests();
+  unsubTemplates = db.collection("templates").onSnapshot(snap => {
+    TEMPLATES = snap.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b) => a.id.localeCompare(b.id));
+    if (!state.selected && TEMPLATES.length) state.selected = TEMPLATES[0].id;
+    render();
+  }, e => toast("Couldn't load templates: " + e.message));
+  unsubRequests = db.collection("requests").onSnapshot(snap => {
+    REQUESTS = snap.docs.map(d => ({ id:d.id, ...d.data() }))
+      .sort((a,b) => (b.createdAt?.toMillis?.()||0) - (a.createdAt?.toMillis?.()||0));
+    render();
+  }, e => toast("Couldn't load requests: " + e.message));
+}
+
+// NOTE: deliberately no hardcoded template content lives in this file.
+// Every template's wording lives only in Firestore, behind sign-in, so it
+// is never readable by viewing this page's source. Add your first
+// templates with the "+ New template" button after signing in as admin.
+
+/* ---------------- tabs ---------------- */
+document.getElementById("tabLibraryBtn").addEventListener("click", () => { state.tab="library"; render(); });
+document.getElementById("tabRequestsBtn").addEventListener("click", () => { state.tab="requests"; render(); });
+
+/* ---------------- library: search / filter / list ---------------- */
+const layoutEl = document.getElementById("layout");
+const searchInput = document.getElementById("searchInput");
+searchInput.addEventListener("input", (e) => { state.query = e.target.value; render(); });
+document.getElementById("backBtn").addEventListener("click", () => { layoutEl.classList.remove("showing-detail"); render(); });
+document.getElementById("addTplBtn").addEventListener("click", async () => {
+  const id = nextTemplateId();
+  await db.collection("templates").doc(id).set({
+    title:"Untitled template", category:"retention", status:"stub",
+    whenToUse:"", variants:[{label:"Default", subject:"", body:""}],
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  state.selected = id; state.editing = id;
+  layoutEl.classList.add("showing-detail");
+});
+
+function searchableText(t){
+  let s = [t.title, t.whenToUse||""].join(" ");
+  (t.variants||[]).forEach(v => { s += " " + (v.label||"") + " " + (v.subject||"") + " " + (v.body||""); });
+  return s.toLowerCase();
+}
+function highlight(text, query){
+  const esc = escapeHtml(text);
+  if (!query) return esc;
+  const words = query.trim().split(/\s+/).filter(Boolean).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (!words.length) return esc;
+  const re = new RegExp("(" + words.join("|") + ")", "ig");
+  return esc.replace(re, "<mark>$1</mark>");
+}
+function filteredTemplates(){
+  const words = state.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return TEMPLATES.filter(t => {
+    if (state.cat !== "all" && t.category !== state.cat) return false;
+    if (!words.length) return true;
+    const hay = searchableText(t);
+    return words.every(w => hay.includes(w));
+  });
+}
+function buildChips(){
+  const chipsEl = document.getElementById("chips");
+  const all = [{key:"all", label:"All", cls:"cat-all"}].concat(Object.keys(CATS).map(k => ({key:k, label:CATS[k].label, cls:"cat-"+k})));
+  chipsEl.innerHTML = all.map(c => `
+    <button class="chip ${c.cls}" data-cat="${c.key}" aria-pressed="${state.cat===c.key}">
+      ${c.key!=="all" ? `<span class="dot" style="background:var(--${c.key})"></span>` : ""}${c.label}
+    </button>`).join("");
+  chipsEl.querySelectorAll(".chip").forEach(btn => btn.addEventListener("click", () => { state.cat = btn.dataset.cat; render(); }));
+}
+function renderList(){
+  const listEl = document.getElementById("list");
+  const items = filteredTemplates();
+  document.getElementById("listCount").textContent = items.length + (items.length === 1 ? " template" : " templates");
+  if (!items.length){ listEl.innerHTML = `<li class="list-empty">${TEMPLATES.length ? "Nothing matches that search." : "No templates yet."}</li>`; return; }
+  listEl.innerHTML = items.map(t => `
+    <li><button class="list-item cat-${t.category}" data-id="${t.id}" aria-current="${state.selected===t.id}">
+      <span class="num">Template ${t.id}</span>${t.status==="stub" ? '<span class="stub-tag">Not written yet</span>' : ""}
+      <span class="name">${highlight(t.title, state.query)}</span>
+    </button></li>`).join("");
+  listEl.querySelectorAll(".list-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.selected = btn.dataset.id; state.editing = null;
+      layoutEl.classList.add("showing-detail");
+      render();
+      window.scrollTo({top:0, behavior:"smooth"});
+    });
+  });
+}
+function copyToClipboard(text, btn){
+  const done = () => { btn.dataset.copied = "true"; setTimeout(() => { btn.dataset.copied = "false"; }, 1400); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); } catch(e) {}
+  document.body.removeChild(ta); done();
+}
+
+/* ---------------- detail (view + admin edit) ---------------- */
+function renderDetail(){
+  const detailEl = document.getElementById("detailContent");
+  const t = TEMPLATES.find(x => x.id === state.selected);
+  if (!t){ detailEl.innerHTML = `<p style="color:var(--ink-faint)">Pick a template from the list, or add one.</p>`; return; }
+
+  if (state.editing === t.id){ renderEdit(t, detailEl); return; }
+
+  let html = `
+    <div class="detail-eyebrow">
+      <span class="detail-num">Template ${t.id}</span>
+      <span class="cat-tag cat-${t.category}">${CATS[t.category] ? CATS[t.category].label : t.category}</span>
+      <div class="detail-actions">${session.mode==="admin" ? '<button class="btn-ghost" id="editBtn">Edit</button>' : ""}</div>
+    </div>
+    <h2 class="detail-title">${escapeHtml(t.title)}</h2>`;
+  if (t.whenToUse) html += `<div class="detail-meta"><span class="label">When to use</span><p>${escapeHtml(t.whenToUse)}</p></div>`;
+  if (t.requestedAddition) html += `<div class="change-flag"><b>Requested change pending:</b> ${escapeHtml(t.requestedAddition)}</div>`;
+  (t.variants||[]).forEach((v, i) => {
+    html += `
+      <div class="variant">
+        <div class="variant-head">
+          <h3>${escapeHtml(v.label||"Default")}</h3>
+          <button class="copy-btn" data-idx="${i}">Copy email</button>
+        </div>
+        <div class="email-body">
+          <div class="email-subject">Subject: ${renderPlaceholders(escapeHtml(v.subject||"(no subject yet)"))}</div>
+          ${formatEmailBody(v.body) || '<p style="color:var(--ink-faint)">Not written yet.</p>'}
+        </div>
+      </div>`;
+  });
+  detailEl.innerHTML = html;
+  detailEl.querySelectorAll(".copy-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const v = t.variants[+btn.dataset.idx];
+      copyToClipboard("Subject: " + (v.subject||"") + "\n\n" + (v.body||""), btn);
+    });
+  });
+  const editBtn = document.getElementById("editBtn");
+  if (editBtn) editBtn.addEventListener("click", () => { state.editing = t.id; render(); });
+}
+
+function renderEdit(t, detailEl){
+  const draft = JSON.parse(JSON.stringify(t));
+  function variantEditHtml(v, i){
+    return `
+      <div class="variant-edit" data-i="${i}">
+        <div class="variant-edit-head">
+          <input type="text" class="v-label" value="${escapeHtml(v.label||"")}" placeholder="Variant label" style="font-size:13px;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--card);color:var(--ink);width:200px;">
+          <button type="button" class="remove-variant">Remove</button>
+        </div>
+        <div class="field"><label>Subject</label><input type="text" class="v-subject" value="${escapeHtml(v.subject||"")}"></div>
+        <div class="field" style="margin-bottom:0;"><label>Body</label><textarea class="v-body" style="min-height:160px;">${escapeHtml(v.body||"")}</textarea></div>
+      </div>`;
+  }
+  detailEl.innerHTML = `
+    <div class="edit-panel">
+      <div class="edit-row">
+        <div class="field"><label>Title</label><input type="text" id="e-title" value="${escapeHtml(draft.title||"")}"></div>
+        <div class="field"><label>Category</label>
+          <select id="e-category">
+            ${Object.keys(CATS).map(k => `<option value="${k}" ${k===draft.category?"selected":""}>${CATS[k].label}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>When to use</label><textarea id="e-when">${escapeHtml(draft.whenToUse||"")}</textarea></div>
+      <div id="variantsWrap">${(draft.variants||[]).map(variantEditHtml).join("")}</div>
+      <button type="button" class="add-variant" id="addVariantBtn">+ Add variant</button>
+      ${t.requestedAddition ? `<div class="change-flag" style="margin-top:16px;"><b>Requested change:</b> ${escapeHtml(t.requestedAddition)} &nbsp; <button type="button" id="clearFlagBtn" class="btn-ghost" style="padding:3px 8px;font-size:11px;">Clear</button></div>` : ""}
+      <div class="edit-actions">
+        <button type="button" class="btn-save" id="saveBtn">Save</button>
+        <button type="button" class="btn-cancel" id="cancelEditBtn">Cancel</button>
+      </div>
+    </div>`;
+
+  document.getElementById("addVariantBtn").addEventListener("click", () => {
+    document.getElementById("variantsWrap").insertAdjacentHTML("beforeend", variantEditHtml({label:"New variant",subject:"",body:""}, document.querySelectorAll(".variant-edit").length));
+    wireRemoveButtons();
+  });
+  function wireRemoveButtons(){
+    document.querySelectorAll(".remove-variant").forEach(b => {
+      b.onclick = () => { if (document.querySelectorAll(".variant-edit").length > 1) b.closest(".variant-edit").remove(); else toast("Keep at least one variant."); };
+    });
+  }
+  wireRemoveButtons();
+
+  document.getElementById("cancelEditBtn").addEventListener("click", () => { state.editing = null; render(); });
+  const clearFlagBtn = document.getElementById("clearFlagBtn");
+  if (clearFlagBtn) clearFlagBtn.addEventListener("click", async () => {
+    await db.collection("templates").doc(t.id).update({ requestedAddition: firebase.firestore.FieldValue.delete() });
+  });
+
+  document.getElementById("saveBtn").addEventListener("click", async () => {
+    const variants = [...document.querySelectorAll(".variant-edit")].map(el => ({
+      label: el.querySelector(".v-label").value.trim() || "Default",
+      subject: el.querySelector(".v-subject").value.trim(),
+      body: el.querySelector(".v-body").value
+    }));
+    const payload = {
+      title: document.getElementById("e-title").value.trim() || "Untitled template",
+      category: document.getElementById("e-category").value,
+      whenToUse: document.getElementById("e-when").value.trim(),
+      status: "ready",
+      variants,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    try {
+      await db.collection("templates").doc(t.id).update(payload);
+      state.editing = null;
+      toast("Saved.");
+    } catch (ex){ toast("Couldn't save: " + ex.message); }
+  });
+}
+
+/* ---------------- requests ---------------- */
+const overlay = document.getElementById("overlay");
+document.getElementById("requestBtn").addEventListener("click", openRequestModal);
+document.getElementById("cancelBtn").addEventListener("click", closeRequestModal);
+overlay.addEventListener("click", (e) => { if (e.target === overlay) closeRequestModal(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !overlay.hidden) closeRequestModal(); });
+document.querySelectorAll('input[name="reqType"]').forEach(r => {
+  r.addEventListener("change", () => { document.getElementById("existingField").hidden = r.value !== "change"; });
+});
+function openRequestModal(){
+  const sel = document.getElementById("reqExisting");
+  sel.innerHTML = TEMPLATES.map(t => `<option value="${t.id}">Template ${t.id} — ${escapeHtml(t.title)}</option>`).join("");
+  document.getElementById("formError").hidden = true;
+  document.getElementById("requestForm").reset();
+  document.getElementById("existingField").hidden = true;
+  overlay.hidden = false;
+  document.getElementById("reqTitle").focus();
+}
+function closeRequestModal(){ overlay.hidden = true; }
+document.getElementById("requestForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById("formError");
+  errEl.hidden = true;
+  const type = document.querySelector('input[name="reqType"]:checked').value;
+  const title = document.getElementById("reqTitle").value.trim();
+  const description = document.getElementById("reqDesc").value.trim();
+  if (!title || !description){ errEl.hidden = false; errEl.textContent = "Title and description are required."; return; }
+  const targetId = type === "change" ? document.getElementById("reqExisting").value : null;
+  try {
+    await db.collection("requests").add({
+      type, targetId, title, description,
+      requestedBy: session.name,
+      status: "pending",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeRequestModal();
+    toast("Request sent.");
+    state.tab = "requests"; render();
+  } catch (ex){ errEl.hidden = false; errEl.textContent = "Couldn't submit: " + ex.message; }
+});
+
+function renderRequests(){
+  const listEl = document.getElementById("reqList");
+  document.getElementById("reqCount").textContent = REQUESTS.filter(r => r.status === "pending").length;
+  if (!REQUESTS.length){ listEl.innerHTML = `<div class="req-empty">No requests yet.</div>`; return; }
+  listEl.innerHTML = REQUESTS.map(r => {
+    const target = r.targetId ? TEMPLATES.find(t => t.id === r.targetId) : null;
+    const forLine = r.type === "change"
+      ? `Change to Template ${r.targetId}${target ? " — " + escapeHtml(target.title) : ""}`
+      : "New use case";
+    const actions = (session.mode === "admin" && r.status === "pending") ? `
+      <div class="req-actions">
+        ${r.type === "new" ? `
+          <select data-cat-for="${r.id}">
+            ${Object.keys(CATS).map(k => `<option value="${k}">${CATS[k].label}</option>`).join("")}
+          </select>` : ""}
+        <button class="btn-approve" data-approve="${r.id}">Approve</button>
+        <button class="btn-reject" data-reject="${r.id}">Reject</button>
+      </div>` : "";
+    return `
+      <div class="req-card">
+        <div class="req-head">
+          <div>
+            <div class="req-title">${escapeHtml(r.title)}</div>
+            <div class="req-meta">${forLine} · requested by ${escapeHtml(r.requestedBy||"someone")} · ${fmtDate(r.createdAt)}</div>
+          </div>
+          <span class="req-status ${r.status}">${r.status}</span>
+        </div>
+        <div class="req-desc">${escapeHtml(r.description)}</div>
+        ${actions}
+      </div>`;
+  }).join("");
+
+  listEl.querySelectorAll("[data-approve]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.approve;
+      const r = REQUESTS.find(x => x.id === id);
+      try {
+        if (r.type === "new"){
+          const cat = listEl.querySelector(`[data-cat-for="${id}"]`).value;
+          const newId = nextTemplateId();
+          await db.collection("templates").doc(newId).set({
+            title: r.title, category: cat, status: "stub",
+            whenToUse: r.description,
+            variants: [{label:"Default", subject:"", body:""}],
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } else if (r.targetId) {
+          await db.collection("templates").doc(r.targetId).update({
+            requestedAddition: r.title + ": " + r.description
+          });
+        }
+        await db.collection("requests").doc(id).update({ status:"approved", resolvedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        toast("Approved.");
+      } catch (ex){ toast("Couldn't approve: " + ex.message); }
+    });
+  });
+  listEl.querySelectorAll("[data-reject]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      try {
+        await db.collection("requests").doc(btn.dataset.reject).update({ status:"rejected", resolvedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      } catch (ex){ toast("Couldn't reject: " + ex.message); }
+    });
+  });
+}
+
+/* ---------------- master render ---------------- */
+function render(){
+  if (!session) return;
+  document.getElementById("tabLibraryBtn").setAttribute("aria-selected", state.tab === "library");
+  document.getElementById("tabRequestsBtn").setAttribute("aria-selected", state.tab === "requests");
+  document.getElementById("libraryView").hidden = state.tab !== "library";
+  document.getElementById("requestsView").hidden = state.tab !== "requests";
+
+  if (state.tab === "library"){
+    buildChips(); renderList(); renderDetail();
+    if (window.matchMedia("(max-width:820px)").matches && !layoutEl.classList.contains("showing-detail")){
+      // keep list view on mobile until a template is tapped
+    } else if (!window.matchMedia("(max-width:820px)").matches){
+      layoutEl.classList.add("showing-detail");
+    }
+  } else {
+    renderRequests();
+  }
+
+  // one-time hint for admin when library is empty — no content is
+  // preloaded on purpose (see note above); add templates via the button.
+  if (session.mode === "admin" && TEMPLATES.length === 0 && !window._seedOffered){
+    window._seedOffered = true;
+    toast("Library is empty — click \"+ New template\" to add your first one.");
+  }
+}
+</script>
+</body>
+</html>
