@@ -462,9 +462,9 @@ document.getElementById("signOutBtn").addEventListener("click", () => {
 auth.onAuthStateChanged(user => {
   if (user){
     if (!user.isAnonymous && user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()){
-      session = { mode:"admin", name:"Anshuka" };
+      session = { mode:"admin", name:"Anshuka", uid: user.uid };
     } else {
-      session = { mode:"colleague", name: sessionStorage.getItem("tl_name") || "Teammate" };
+      session = { mode:"colleague", name: sessionStorage.getItem("tl_name") || "Teammate", uid: user.uid };
     }
     document.getElementById("gate").hidden = true;
     document.getElementById("app").hidden = false;
@@ -494,7 +494,12 @@ function subscribeData(){
     if (!state.selected && TEMPLATES.length) state.selected = TEMPLATES[0].id;
     render();
   }, e => toast("Couldn't load templates: " + e.message));
-  unsubRequests = db.collection("requests").onSnapshot(snap => {
+  // Admin sees every request; a colleague only ever queries their own —
+  // this is also enforced server-side in firestore.rules, not just here.
+  const reqQuery = session.mode === "admin"
+    ? db.collection("requests")
+    : db.collection("requests").where("requestedByUid", "==", session.uid);
+  unsubRequests = reqQuery.onSnapshot(snap => {
     REQUESTS = snap.docs.map(d => ({ id:d.id, ...d.data() }))
       .sort((a,b) => (b.createdAt?.toMillis?.()||0) - (a.createdAt?.toMillis?.()||0));
     render();
@@ -736,6 +741,7 @@ document.getElementById("requestForm").addEventListener("submit", async (e) => {
     await db.collection("requests").add({
       type, targetId, title, description, suggestedSubject, suggestedBody,
       requestedBy: session.name,
+      requestedByUid: auth.currentUser.uid,
       status: "pending",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
