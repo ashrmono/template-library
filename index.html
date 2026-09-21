@@ -210,8 +210,16 @@
 </head>
 <body>
 
+<!-- ================= AUTH CHECK (avoids a flash of the login screen on refresh) ================= -->
+<div class="gate" id="authLoading">
+  <div class="gate-card" style="text-align:center;">
+    <div class="gate-title">Template Library</div>
+    <div class="gate-sub" style="margin-bottom:0;">Checking your session…</div>
+  </div>
+</div>
+
 <!-- ================= LOGIN GATE ================= -->
-<div class="gate" id="gate">
+<div class="gate" id="gate" hidden>
   <div class="gate-card">
     <div class="gate-title">Template Library</div>
     <div class="gate-sub">Monotype retention &amp; routing email templates.</div>
@@ -368,6 +376,10 @@ const TEAM_PASSWORD = "Monotype2026!";              // the one password everyone
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+// Be explicit about persistence rather than relying on the SDK default —
+// this keeps someone signed in across refreshes, tab closes and browser
+// restarts (same-device only; it does not follow them to another device).
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
 const CATS = { retention:{label:"Retention"}, routing:{label:"Routing"}, policy:{label:"Policy"} };
 
@@ -429,6 +441,7 @@ document.getElementById("teamForm").addEventListener("submit", async (e) => {
   }
   document.getElementById("teamSubmit").disabled = true;
   try {
+    localStorage.setItem("tl_name", name);
     sessionStorage.setItem("tl_name", name);
     await auth.signInAnonymously();
   } catch (ex){
@@ -455,16 +468,22 @@ document.getElementById("adminForm").addEventListener("submit", async (e) => {
 });
 
 document.getElementById("signOutBtn").addEventListener("click", () => {
+  localStorage.removeItem("tl_name");
   sessionStorage.removeItem("tl_name");
   auth.signOut();
 });
 
 auth.onAuthStateChanged(user => {
+  // The very first callback (on page load / refresh) is what tells us
+  // whether a session was already persisted — until it fires, don't show
+  // the login screen, or it flashes on every refresh even for someone
+  // who's already signed in.
+  document.getElementById("authLoading").hidden = true;
   if (user){
     if (!user.isAnonymous && user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()){
       session = { mode:"admin", name:"Anshuka", uid: user.uid };
     } else {
-      session = { mode:"colleague", name: sessionStorage.getItem("tl_name") || "Teammate", uid: user.uid };
+      session = { mode:"colleague", name: localStorage.getItem("tl_name") || sessionStorage.getItem("tl_name") || "Teammate", uid: user.uid };
     }
     document.getElementById("gate").hidden = true;
     document.getElementById("app").hidden = false;
