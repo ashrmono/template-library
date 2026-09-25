@@ -794,7 +794,15 @@ function renderEdit(t, detailEl){
       <div class="edit-actions">
         <button type="button" class="btn-save" id="saveBtn">Save</button>
         <button type="button" class="btn-cancel" id="cancelEditBtn">Cancel</button>
+<button type="button" class="btn-reject" style="margin-left:auto;" id="deleteTplBtn">Delete template</button>
       </div>
+<div class="change-flag" id="deleteTplConfirm" hidden style="margin-top:14px;">
+<b>Delete "${escapeHtml(t.title)}" (Template ${t.id})?</b> This removes it for everyone and can't be undone.
+<div style="margin-top:10px; display:flex; gap:8px;">
+<button type="button" class="btn-reject-confirm" id="confirmDeleteTplBtn">Yes, delete it</button>
+<button type="button" class="btn-reject-cancel" id="cancelDeleteTplBtn">Cancel</button>
+</div>
+</div>
     </div>`;
 
   function wireCharCounters(){
@@ -831,6 +839,21 @@ function renderEdit(t, detailEl){
   wireRemoveButtons();
 
   document.getElementById("cancelEditBtn").addEventListener("click", () => { state.editing = null; render(); });
+document.getElementById("deleteTplBtn").addEventListener("click", () => {
+document.getElementById("deleteTplConfirm").hidden = false;
+});
+document.getElementById("cancelDeleteTplBtn").addEventListener("click", () => {
+document.getElementById("deleteTplConfirm").hidden = true;
+});
+document.getElementById("confirmDeleteTplBtn").addEventListener("click", async () => {
+try {
+await db.collection("templates").doc(t.id).delete();
+state.editing = null;
+state.selected = null;
+layoutEl.classList.remove("showing-detail");
+toast("Template deleted.");
+} catch (ex) { toast("Couldn't delete: " + ex.message); }
+});
   const clearFlagBtn = document.getElementById("clearFlagBtn");
   if (clearFlagBtn) clearFlagBtn.addEventListener("click", async () => {
     await db.collection("templates").doc(t.id).update({ requestedAddition: firebase.firestore.FieldValue.delete() });
